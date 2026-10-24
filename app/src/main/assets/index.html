@@ -1,0 +1,138 @@
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>سرمایه‌یار</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101827;color:#f1f5f9;font-family:Tahoma,Arial,sans-serif;padding:18px}
+header{text-align:center;padding:18px 0}
+header h1{color:#4ade80;margin-bottom:8px}
+.card{background:#1e293b;border-radius:16px;padding:18px;margin:14px 0}
+label{display:block;margin:14px 0 7px;color:#cbd5e1}
+input,select,button{width:100%;padding:12px;border:0;border-radius:9px;font-size:16px}
+input,select{background:#334155;color:white}
+button{background:#22c55e;color:#052e16;font-weight:bold;margin-top:16px}
+.result{font-size:22px;color:#4ade80;font-weight:bold;overflow-wrap:anywhere}
+.small{font-size:12px;color:#94a3b8}
+canvas{width:100%;height:180px}
+</style>
+</head>
+<body>
+<header>
+<h1>سرمایه‌یار</h1>
+<div>مدیریت سرمایه و محاسبه سود</div>
+</header>
+
+<div class="card">
+<h3>محاسبه‌گر سرمایه</h3>
+<label>سرمایه اولیه (تومان)</label>
+<input id="capital" type="number" value="1150000000">
+<label>سود ماهانه (درصد)</label>
+<input id="rate" type="number" value="2.6" step="0.1">
+<label>مدت سرمایه‌گذاری (ماه)</label>
+<input id="months" type="number" value="11">
+<label>واریز ماهانه (تومان)</label>
+<input id="deposit" type="number" value="0">
+<label>روش محاسبه</label>
+<select id="mode">
+<option value="simple">بدون سود مرکب</option>
+<option value="compound">با سود مرکب</option>
+</select>
+<button onclick="calculate(true)">محاسبه و ذخیره</button>
+</div>
+
+<div class="card">
+<h3>نتیجه محاسبه</h3>
+<p>اصل سرمایه و واریزی‌ها</p>
+<div class="result" id="principal">—</div>
+<p>سود تخمینی</p>
+<div class="result" id="profit">—</div>
+<p>ارزش نهایی سرمایه</p>
+<div class="result" id="total">—</div>
+<p class="small">محاسبه تخمینی است؛ سود واقعی و تضمین‌شده نیست.</p>
+</div>
+
+<div class="card">
+<h3>نمودار رشد سرمایه</h3>
+<canvas id="chart" width="600" height="260"></canvas>
+</div>
+
+<div class="card">
+<h3>اطلاعات ذخیره‌شده</h3>
+<div id="saved">هنوز اطلاعاتی ذخیره نشده است.</div>
+<button onclick="clearSaved()" style="background:#475569;color:white">پاک کردن اطلاعات ذخیره‌شده</button>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const fmt=n=>Math.round(n).toLocaleString('fa-IR')+' تومان';
+
+function calculate(save){
+ let c=Math.max(0,Number($('capital').value)||0);
+ let r=(Number($('rate').value)||0)/100;
+ let m=Math.max(0,Math.min(600,Math.floor(Number($('months').value)||0)));
+ let d=Math.max(0,Number($('deposit').value)||0);
+ let compound=$('mode').value==='compound';
+ let balance=c, paid=c, points=[c];
+
+ for(let i=1;i<=m;i++){
+   if(compound) balance*=1+r;
+   else balance+=c*r;
+   balance+=d;
+   paid+=d;
+   points.push(balance);
+ }
+ let p=balance-paid;
+ $('principal').textContent=fmt(paid);
+ $('profit').textContent=fmt(p);
+ $('total').textContent=fmt(balance);
+ draw(points);
+
+ if(save){
+  const data={c,r:r*100,m,d,mode:$('mode').value,paid,profit:p,total:balance};
+  localStorage.setItem('sarmayehyar',JSON.stringify(data));
+  showSaved(data);
+ }
+}
+
+function draw(points){
+ const canvas=$('chart'),ctx=canvas.getContext('2d');
+ ctx.clearRect(0,0,canvas.width,canvas.height);
+ if(!points.length)return;
+ let max=Math.max(...points,1);
+ ctx.strokeStyle='#4ade80';ctx.lineWidth=4;ctx.beginPath();
+ points.forEach((v,i)=>{
+  let x=12+i*(canvas.width-24)/Math.max(1,points.length-1);
+  let y=canvas.height-15-v/max*(canvas.height-30);
+  if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+ });
+ ctx.stroke();
+ ctx.fillStyle='#94a3b8';ctx.font='18px Tahoma';
+ ctx.fillText('سرمایه در طول زمان',12,22);
+}
+
+function showSaved(d){
+ $('saved').innerHTML=
+ 'سرمایه اولیه: '+fmt(d.c)+'<br>'+
+ 'سود ماهانه: '+d.r+'٪<br>'+
+ 'مدت: '+d.m+' ماه<br>'+
+ 'ارزش نهایی: '+fmt(d.total);
+}
+function clearSaved(){
+ localStorage.removeItem('sarmayehyar');
+ $('saved').textContent='اطلاعات ذخیره‌شده پاک شد.';
+}
+try{
+ const d=JSON.parse(localStorage.getItem('sarmayehyar'));
+ if(d){
+  $('capital').value=d.c;$('rate').value=d.r;
+  $('months').value=d.m;$('deposit').value=d.d;
+  $('mode').value=d.mode;calculate(false);showSaved(d);
+ }else calculate(false);
+}catch(e){calculate(false)}
+</script>
+</body>
+</html>
